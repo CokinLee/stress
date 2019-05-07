@@ -70,6 +70,11 @@ POST http://127.0.0.1:4869/ form:5f189.jpeg
 ```
 POST http://127.0.0.1:4869/ form:yourfilename:5f189.jpeg
 ```
+
+新增随机数功能，使用{RI[1-100000]}指定一个全闭区间随机数
+```
+echo "POST Cookie:cuid=QAPerfTestA8B0A287D3DE9CD7A084EB28BE%7C{RI[1-10000000]} http://127.0.0.1:8088/posturi?id=id{RI[1-1000000]} form:yourfilename:{RI[1-2000]}.jpeg" | stress attack  -rate=200 -duration=2h
+```
 	
 - 设定测试请求来源
 
@@ -101,6 +106,7 @@ target文件中的请求默认会以随机顺序进行测试，如有必要可�
 ```
 stress attack -targets=down2.txt -c=40 -n=10000 -ordering="sequential"
 ```
+
 	
 - report工具
 
