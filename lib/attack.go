@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -93,21 +94,19 @@ func AttackRateResults(tgts Targets, rate uint64, du time.Duration) Results {
 // The results of the attack are put into a slice which is returned.
 func (a *Attacker) AttackRate(tgts Targets, rate uint64, du time.Duration) {
 	hits := int(rate * uint64(du.Seconds()))
-	// 取消result记录
-	//resc := make(chan Result)
 	throttle := time.NewTicker(time.Duration(1e9 / rate))
 	defer throttle.Stop()
 
+	var wg sync.WaitGroup
 	for i := 0; i < hits; i++ {
 		<-throttle.C
-		// go func(tgt Target) { resc <- a.hit(tgt) }(tgts[i%len(tgts)])
-		go func(tgt Target) { a.hit(tgt) }(tgts[i%len(tgts)])
+		wg.Add(1)
+		go func(tgt Target) {
+			a.hit(tgt)
+			wg.Done()
+		}(tgts[i%len(tgts)])
 	}
-	// results := make(Results, 0, hits)
-	// for len(results) < cap(results) {
-	// 	results = append(results, <-resc)
-	// }
-
+	wg.Wait()
 	return
 }
 
@@ -221,9 +220,15 @@ func (a *Attacker) AttackConcy(tgts Targets, concurrency uint64, number uint64) 
 	}
 
 	var i uint64
+	var wg sync.WaitGroup
 	for i = 0; i < concurrency; i++ {
-		go func(tgts Targets) { a.shoot(tgts) }(tgts)
+		wg.Add(1)
+		go func(tgts Targets) {
+			a.shoot(tgts)
+			wg.Done()
+		}(tgts)
 	}
+	wg.Wait()
 	return
 }
 
