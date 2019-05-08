@@ -70,19 +70,51 @@ func NewAttacker(redirects int, timeout time.Duration, laddr net.IPAddr) *Attack
 	}}
 }
 
-// AttackRate hits the passed Targets (http.Requests) at the rate specified for
+// AttackRateResults hits the passed Targets (http.Requests) at the rate specified for
 // duration time and then waits for all the requests to come back.
 // The results of the attackrate are put into a slice which is returned.
 //
-// AttackRate is a wrapper around DefaultAttacker.Attack
-func AttackRate(tgts Targets, rate uint64, du time.Duration) Results {
-	return DefaultAttacker.AttackRate(tgts, rate, du)
+// AttackRateResults is a wrapper around DefaultAttacker.Attack
+func AttackRate(tgts Targets, rate uint64, du time.Duration) {
+	DefaultAttacker.AttackRate(tgts, rate, du)
+}
+
+// AttackRateResults hits the passed Targets (http.Requests) at the rate specified for
+// duration time and then waits for all the requests to come back.
+// The results of the attackrate are put into a slice which is returned.
+//
+// AttackRateResults is a wrapper around DefaultAttacker.Attack
+func AttackRateResults(tgts Targets, rate uint64, du time.Duration) Results {
+	return DefaultAttacker.AttackRateResults(tgts, rate, du)
 }
 
 // AttackRate attacks the passed Targets (http.Requests) at the rate specified for
 // duration time and then waits for all the requests to come back.
 // The results of the attack are put into a slice which is returned.
-func (a *Attacker) AttackRate(tgts Targets, rate uint64, du time.Duration) Results {
+func (a *Attacker) AttackRate(tgts Targets, rate uint64, du time.Duration) {
+	hits := int(rate * uint64(du.Seconds()))
+	// 取消result记录
+	//resc := make(chan Result)
+	throttle := time.NewTicker(time.Duration(1e9 / rate))
+	defer throttle.Stop()
+
+	for i := 0; i < hits; i++ {
+		<-throttle.C
+		// go func(tgt Target) { resc <- a.hit(tgt) }(tgts[i%len(tgts)])
+		go func(tgt Target) { a.hit(tgt) }(tgts[i%len(tgts)])
+	}
+	// results := make(Results, 0, hits)
+	// for len(results) < cap(results) {
+	// 	results = append(results, <-resc)
+	// }
+
+	return
+}
+
+// AttackRate attacks the passed Targets (http.Requests) at the rate specified for
+// duration time and then waits for all the requests to come back.
+// The results of the attack are put into a slice which is returned.
+func (a *Attacker) AttackRateResults(tgts Targets, rate uint64, du time.Duration) Results {
 	hits := int(rate * uint64(du.Seconds()))
 	resc := make(chan Result)
 	throttle := time.NewTicker(time.Duration(1e9 / rate))
@@ -165,14 +197,40 @@ func (a *Attacker) hit(tgt Target) (res Result) {
 // The results of the AttackConcy are put into a slice which is returned.
 //
 // AttackConcy is a wrapper around DefaultAttacker.Attack
-func AttackConcy(tgts Targets, concurrency uint64, number uint64) Results {
-	return DefaultAttacker.AttackConcy(tgts, concurrency, number)
+func AttackConcy(tgts Targets, concurrency uint64, number uint64) {
+	DefaultAttacker.AttackConcy(tgts, concurrency, number)
+}
+
+// AttackConcyResults shoots the passed Targets (http.Requests) at the concurrency level
+// specified for times and then waits for all the requests to come back.
+// The results of the AttackConcyResults are put into a slice which is returned.
+//
+// AttackConcyResults is a wrapper around DefaultAttacker.Attack
+func AttackConcyResults(tgts Targets, concurrency uint64, number uint64) Results {
+	return DefaultAttacker.AttackConcyResults(tgts, concurrency, number)
 }
 
 // AttackConcy attacks the passed Targets (http.Requests) at the concurrency level
 // specified for times and then waits for all the requests to come back.
 // The results of the AttackConcy are put into a slice which is returned.
-func (a *Attacker) AttackConcy(tgts Targets, concurrency uint64, number uint64) Results {
+func (a *Attacker) AttackConcy(tgts Targets, concurrency uint64, number uint64) {
+	atomic.StoreInt64(&remain, int64(number))
+
+	if concurrency > number {
+		concurrency = number
+	}
+
+	var i uint64
+	for i = 0; i < concurrency; i++ {
+		go func(tgts Targets) { a.shoot(tgts) }(tgts)
+	}
+	return
+}
+
+// AttackConcyResults attacks the passed Targets (http.Requests) at the concurrency level
+// specified for times and then waits for all the requests to come back.
+// The results of the AttackConcy are put into a slice which is returned.
+func (a *Attacker) AttackConcyResults(tgts Targets, concurrency uint64, number uint64) Results {
 	retsc := make(chan Results)
 	atomic.StoreInt64(&remain, int64(number))
 

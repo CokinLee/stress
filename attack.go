@@ -34,6 +34,7 @@ func attackCmd() command {
 	fs.IntVar(&opts.redirects, "redirects", 10, "Number of redirects to follow")
 	fs.Var(&opts.headers, "header", "Request header")
 	fs.Var(&opts.laddr, "laddr", "Local IP address")
+	fs.BoolVar(&opts.results, "results", false, "whether or not output results")
 
 	return command{fs, func(args []string) error {
 		fs.Parse(args)
@@ -55,6 +56,7 @@ type attackOpts struct {
 	redirects   int
 	headers     headers
 	laddr       localAddr
+	results     bool
 }
 
 // attack validates the attack arguments, sets up the
@@ -127,7 +129,11 @@ func attack(opts *attackOpts) error {
 			opts.rate,
 			opts.duration,
 		)
-		results = attacker.AttackRate(targets, opts.rate, opts.duration)
+		if opts.results {
+			results = attacker.AttackRateResults(targets, opts.rate, opts.duration)
+		} else {
+			attacker.AttackRate(targets, opts.rate, opts.duration)
+		}
 	} else if opts.concurrency != 0 {
 		concurrency := opts.concurrency
 		if opts.concurrency > opts.number {
@@ -140,7 +146,11 @@ func attack(opts *attackOpts) error {
 			concurrency,
 			opts.number,
 		)
-		results = attacker.AttackConcy(targets, opts.concurrency, opts.number)
+		if opts.results {
+			results = attacker.AttackConcyResults(targets, opts.concurrency, opts.number)
+		} else {
+			attacker.AttackConcy(targets, opts.concurrency, opts.number)
+		}
 	}
 
 	log.Printf("Done! Writing results to '%s'...", opts.outputf)

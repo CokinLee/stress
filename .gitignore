@@ -29,3 +29,6 @@ targets.txt
 stress-*.tar.gz
 lib/lib.test
 *.test
+
+# Mac file
+.DS_Store
