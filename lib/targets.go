@@ -10,24 +10,32 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Target is a HTTP request blueprint
 type Target struct {
-	Method string
-	URL    string
-	Body   []byte
-	File   string
-	Header http.Header
+	Method    string
+	URL       string
+	Body      []byte
+	File      string
+	Header    http.Header
+	OldHeader http.Header
 }
 
 // Request creates an *http.Request out of Target and returns it along with an
 // error in case of failure.
 func (t *Target) Request() (*http.Request, error) {
+	// 替换URL中的随机数
+	t.URL = string(replaceRI([]byte(t.URL)))
 	var req *http.Request
 	var err error
 	if t.Method == "POST" && t.File != "" {
+		// 替换文件名中的随机数
+		t.File = string(replaceRI([]byte(t.File)))
 		if strings.Contains(t.File, "form") {
 			buf := &bytes.Buffer{}
 			w := multipart.NewWriter(buf)
@@ -84,7 +92,12 @@ func (t *Target) Request() (*http.Request, error) {
 	}
 	for k, vs := range t.Header {
 		req.Header[k] = make([]string, len(vs))
-		copy(req.Header[k], vs)
+		// 替换Header中的随机数
+		for i, v := range vs {
+			req.Header[k][i] = string(replaceRI([]byte(v)))
+		}
+		// 使用替换赋值
+		// copy(req.Header[k], vs)
 	}
 	req.Header.Set("User-Agent", "stress 1.0")
 	if host := req.Header.Get("Host"); host != "" {
@@ -123,6 +136,33 @@ func NewTargetsFrom(source io.Reader, body []byte, header http.Header) (Targets,
 	}
 
 	return NewTargets(lines, body, header)
+}
+
+// replaceRI 替换随机数
+func replaceRI(b []byte) []byte {
+	reg := regexp.MustCompile(`\{RI\[(\d)+-(\d)+\]\}`)
+	for {
+		if reg.Match(b) {
+			// 获取参数
+			s := string(b)
+			i := strings.Index(s, "{RI[")
+			r := s[i+4:]
+			j := strings.Index(r, "]}")
+			rs := r[:j]
+			si := strings.Index(s, "]}")
+			ins := strings.Split(rs, "-")
+			// TODO handle error
+			min, _ := strconv.Atoi(ins[0])
+			max, _ := strconv.Atoi(ins[1])
+			ran := rand.New(rand.NewSource(int64(time.Now().Nanosecond())))
+			res := ran.Intn(max-min+1) + min // [min,max]
+			rep := strconv.Itoa(res)
+			b = []byte(strings.Replace(s, s[i:si+2], rep, -1))
+			// b = reg.ReplaceAll(b, rep)
+			continue
+		}
+		return b
+	}
 }
 
 type headers map[string]string

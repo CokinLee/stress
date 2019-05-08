@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	stress "github.com/buaazp/stress/lib"
+	stress "github.com/CokinLee/stress/lib"
 )
 
 func attackCmd() command {
@@ -98,7 +98,7 @@ func attack(opts *attackOpts) error {
 		return fmt.Errorf(errTargetsFilePrefix+"(%s): %s", opts.targetsf, err)
 	}
 	if len(targets) == 0 {
-		return fmt.Errorf(errTargetsFilePrefix+" : is empty")
+		return fmt.Errorf(errTargetsFilePrefix + " : is empty")
 	}
 
 	switch opts.ordering {
