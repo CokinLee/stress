@@ -34,7 +34,7 @@ func attackCmd() command {
 	fs.IntVar(&opts.redirects, "redirects", 10, "Number of redirects to follow")
 	fs.Var(&opts.headers, "header", "Request header")
 	fs.Var(&opts.laddr, "laddr", "Local IP address")
-	fs.BoolVar(&opts.results, "results", false, "whether or not output results")
+	fs.BoolVar(&opts.results, "results", false, "whether or not output results, rate mode only")
 
 	return command{fs, func(args []string) error {
 		fs.Parse(args)
