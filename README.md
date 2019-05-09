@@ -62,6 +62,7 @@ Usage of stress attack:
   -redirects=10: Number of redirects to follow
   -targets="stdin": Targets file
   -timeout=0: Requests timeout
+  -results=false: Whether or not output results, rate mode only
 ````
 
 #### -rate
