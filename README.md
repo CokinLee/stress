@@ -1,28 +1,27 @@
 # stress
 
 A test tool to send random http GET/POST requests to server.
-Fork from [Vegeta](https://github.com/tsenart/vegeta).
+Fork from [stress](https://github.com/CokinLee/stress).
 
 Stress is a versatile HTTP load testing tool built out of need to drill
 HTTP services with a constant request rate or concurrency level.
 It can be used both as a command line utility and a library.
 
-Author: [@招牌疯子](http://weibo.com/819880808)  
-Contact me: zp@buaa.us  
+Author: Cokin Lee 
+Contact me: lijingchen@vip.qq.com  
 
-[![Build Status](https://travis-ci.org/buaazp/stress.svg?branch=master)](https://travis-ci.org/buaazp/stress) [![wercker status](https://app.wercker.com/status/5e44af92a3de33c3ccc4dfd385405887/s "wercker status")](https://app.wercker.com/project/bykey/5e44af92a3de33c3ccc4dfd385405887) [![GoDoc](https://godoc.org/github.com/buaazp/stress?status.png)](https://godoc.org/github.com/buaazp/stress)  
 
 ## Install
 ### Pre-compiled executables
-Get them [here](https://github.com/buaazp/stress/releases).
+Get them [here](https://github.com/CokinLee/stress/releases).
 
 ### Source
 You need go installed and `GOBIN` in your `PATH`. Once that is done, run the
 command:
 
 ````
-$ go get github.com/buaazp/stress
-$ go install github.com/buaazp/stress
+$ go get github.com/CokinLee/stress
+$ go install github.com/CokinLee/stress
 ````
 
 ## Usage manual
@@ -212,7 +211,7 @@ to change the moving average window size (in data points).
 package main
 
 import (
-  stress "github.com/buaazp/stress/lib"
+  stress "github.com/CokinLee/stress/lib"
   "time"
   "fmt"
 )
