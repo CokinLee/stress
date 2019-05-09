@@ -126,6 +126,9 @@ default is 10.
 Specifies the timeout for each request. The default is 0 which disables
 timeouts.
 
+#### -
+Specifies whether or not output results, rate mode only.The default is false.
+
 ### report
 ````
 ➜ stress git:(master) ✗ stress report -h
