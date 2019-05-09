@@ -121,6 +121,7 @@ func attack(opts *attackOpts) error {
 	attacker := stress.NewAttacker(opts.redirects, opts.timeout, *opts.laddr.IPAddr)
 
 	var results stress.Results
+	var metrics stress.Metrics
 	if opts.rate != 0 {
 		log.Printf(
 			"Stress is attacking %d targets in %s order and %d rate for %s...\n",
@@ -132,7 +133,7 @@ func attack(opts *attackOpts) error {
 		if opts.results {
 			results = attacker.AttackRateResults(targets, opts.rate, opts.duration)
 		} else {
-			attacker.AttackRate(targets, opts.rate, opts.duration)
+			metrics = attacker.AttackRate(targets, opts.rate, opts.duration)
 		}
 	} else if opts.concurrency != 0 {
 		concurrency := opts.concurrency
@@ -146,25 +147,38 @@ func attack(opts *attackOpts) error {
 			concurrency,
 			opts.number,
 		)
-		if opts.results {
-			results = attacker.AttackConcyResults(targets, opts.concurrency, opts.number)
-		} else {
-			attacker.AttackConcy(targets, opts.concurrency, opts.number)
+		// 并发压测模式先不考虑去掉results输出
+		opts.results = true
+		results = attacker.AttackConcyResults(targets, opts.concurrency, opts.number)
+		// if opts.results {
+		// 	results = attacker.AttackConcyResults(targets, opts.concurrency, opts.number)
+		// } else {
+		// 	metrics = attacker.AttackConcy(targets, opts.concurrency, opts.number)
+		// }
+	}
+	if opts.results {
+		log.Printf("Done! Writing results to '%s'...", opts.outputf)
+		err = results.Encode(out)
+		if err != nil {
+			return err
 		}
-	}
 
-	log.Printf("Done! Writing results to '%s'...", opts.outputf)
-	err = results.Encode(out)
-	if err != nil {
-		return err
-	}
+		data, err := stress.ReportText(results)
+		if err != nil {
+			return err
+		}
 
-	data, err := stress.ReportText(results)
-	if err != nil {
-		return err
-	}
+		_, err = os.Stdout.Write(data)
+	} else {
+		log.Printf("Done!\n")
+		data, err := stress.ReportMetrics(metrics)
+		if err != nil {
+			return err
+		}
 
-	_, err = os.Stdout.Write(data)
+		_, err = os.Stdout.Write(data)
+
+	}
 
 	return err
 }

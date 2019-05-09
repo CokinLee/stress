@@ -71,11 +71,11 @@ func NewAttacker(redirects int, timeout time.Duration, laddr net.IPAddr) *Attack
 	}}
 }
 
-// AttackRateResults hits the passed Targets (http.Requests) at the rate specified for
+// AttackRate hits the passed Targets (http.Requests) at the rate specified for
 // duration time and then waits for all the requests to come back.
 // The results of the attackrate are put into a slice which is returned.
 //
-// AttackRateResults is a wrapper around DefaultAttacker.Attack
+// AttackRate is a wrapper around DefaultAttacker.Attack
 func AttackRate(tgts Targets, rate uint64, du time.Duration) {
 	DefaultAttacker.AttackRate(tgts, rate, du)
 }
@@ -92,11 +92,12 @@ func AttackRateResults(tgts Targets, rate uint64, du time.Duration) Results {
 // AttackRate attacks the passed Targets (http.Requests) at the rate specified for
 // duration time and then waits for all the requests to come back.
 // The results of the attack are put into a slice which is returned.
-func (a *Attacker) AttackRate(tgts Targets, rate uint64, du time.Duration) {
+func (a *Attacker) AttackRate(tgts Targets, rate uint64, du time.Duration) Metrics {
+	var metrics Metrics
 	hits := int(rate * uint64(du.Seconds()))
 	throttle := time.NewTicker(time.Duration(1e9 / rate))
 	defer throttle.Stop()
-
+	start := time.Now()
 	var wg sync.WaitGroup
 	for i := 0; i < hits; i++ {
 		<-throttle.C
@@ -107,10 +108,13 @@ func (a *Attacker) AttackRate(tgts Targets, rate uint64, du time.Duration) {
 		}(tgts[i%len(tgts)])
 	}
 	wg.Wait()
-	return
+	metrics.Duration = time.Now().Sub(start)
+	metrics.Requests = uint64(hits)
+	metrics.QPS = float64(metrics.Requests) / metrics.Duration.Seconds()
+	return metrics
 }
 
-// AttackRate attacks the passed Targets (http.Requests) at the rate specified for
+// AttackRateResults attacks the passed Targets (http.Requests) at the rate specified for
 // duration time and then waits for all the requests to come back.
 // The results of the attack are put into a slice which is returned.
 func (a *Attacker) AttackRateResults(tgts Targets, rate uint64, du time.Duration) Results {
@@ -196,8 +200,8 @@ func (a *Attacker) hit(tgt Target) (res Result) {
 // The results of the AttackConcy are put into a slice which is returned.
 //
 // AttackConcy is a wrapper around DefaultAttacker.Attack
-func AttackConcy(tgts Targets, concurrency uint64, number uint64) {
-	DefaultAttacker.AttackConcy(tgts, concurrency, number)
+func AttackConcy(tgts Targets, concurrency uint64, number uint64) Metrics {
+	return DefaultAttacker.AttackConcy(tgts, concurrency, number)
 }
 
 // AttackConcyResults shoots the passed Targets (http.Requests) at the concurrency level
@@ -212,7 +216,9 @@ func AttackConcyResults(tgts Targets, concurrency uint64, number uint64) Results
 // AttackConcy attacks the passed Targets (http.Requests) at the concurrency level
 // specified for times and then waits for all the requests to come back.
 // The results of the AttackConcy are put into a slice which is returned.
-func (a *Attacker) AttackConcy(tgts Targets, concurrency uint64, number uint64) {
+func (a *Attacker) AttackConcy(tgts Targets, concurrency uint64, number uint64) Metrics {
+	var metrics Metrics
+	retsc := make(chan Results)
 	atomic.StoreInt64(&remain, int64(number))
 
 	if concurrency > number {
@@ -220,16 +226,18 @@ func (a *Attacker) AttackConcy(tgts Targets, concurrency uint64, number uint64) 
 	}
 
 	var i uint64
-	var wg sync.WaitGroup
+	start := time.Now()
 	for i = 0; i < concurrency; i++ {
-		wg.Add(1)
 		go func(tgts Targets) {
-			a.shoot(tgts)
-			wg.Done()
+			retsc <- a.shoot(tgts)
 		}(tgts)
 	}
-	wg.Wait()
-	return
+	for i = 0; i < concurrency; i++ {
+		metrics.Requests += uint64(len(<-retsc))
+	}
+	metrics.Duration = time.Now().Sub(start)
+	metrics.QPS = float64(metrics.Requests) / metrics.Duration.Seconds()
+	return metrics
 }
 
 // AttackConcyResults attacks the passed Targets (http.Requests) at the concurrency level
